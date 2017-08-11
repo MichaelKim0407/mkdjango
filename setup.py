@@ -13,6 +13,10 @@ setup(
 
     version=VERSION,
 
+    install_requires=[
+        'django>=1.10'
+    ],
+
     packages=find_packages(),
 
     url='https://github.com/MichaelKim0407/mkdjango',
