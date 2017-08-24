@@ -8,6 +8,12 @@ __SERIALIZE_EXTEND_METHOD_NAME = 'serialize_extend'
 
 
 class SerializeProperty(object):
+    """
+    A property that is intended to be serialized.
+
+    Usage: see `serialize_property`
+    """
+
     def __init__(self, func, name):
         self.__func = func
         self.name = name
@@ -17,6 +23,26 @@ class SerializeProperty(object):
 
 
 def serialize_property(name=None):
+    """
+    A decorator that marks a class method as intended for serialization.
+
+    :param name: The key for serialization.
+                 If left None, the name of the method will be used,
+                 with the exception that, if the name starts with "get_",
+                 the part after that will be used.
+
+    e.g.
+
+    class MyModel(models.Model):
+        some fields
+
+        @serialize_property()
+        def get_x():
+            return stuff
+
+    See also: serialize
+    """
+
     def __decor(func):
         if name is not None:
             property_name = name
@@ -33,11 +59,29 @@ def serialize_property(name=None):
 
 
 def serialize(obj):
+    """
+    Serialize a Model instance into a dict.
+
+    The instance will be serialized with the following strategy:
+
+    - If a method named `serialize` exists, use the result for that method.
+      The method MUST return a dict.
+      All the following steps are ignored.
+
+    - Find all the fields defined in the class, and use their names and values.
+    - Find all SerializeProperty's defined in the class, and add their names and values.
+    - If a method named `serialize_extend` exists, add the result for that method.
+      The method MUST return a dict.
+
+    :param obj: The model instance.
+    """
+
     if hasattr(obj, __SERIALIZE_METHOD_NAME):
         return getattr(obj, __SERIALIZE_METHOD_NAME)()
 
     result = {field.name: field.value_from_object(obj)
-              for field in obj._meta.get_fields() if isinstance(field, django.db.models.Field)}
+              for field in obj._meta.get_fields()
+              if isinstance(field, django.db.models.Field)}
 
     for attr in obj.__class__.__dict__.values():
         if isinstance(attr, SerializeProperty):
@@ -51,7 +95,8 @@ def serialize(obj):
 
 
 def is_query_set(obj):
-    return isinstance(obj, django.db.models.Manager) or isinstance(obj, django.db.models.QuerySet)
+    return isinstance(obj, django.db.models.Manager) \
+           or isinstance(obj, django.db.models.QuerySet)
 
 
 def is_query_object(obj):
@@ -82,6 +127,19 @@ def serialize_all(obj):
 
 
 class ModelWrapper(object):
+    """
+    A middleware that, if the value returned by the view is not an HttpResponse,
+    find all Model instances or query results contained in the return value,
+    and serialize those instances/results.
+
+    To specify how a Model instance should be serialized,
+    see serialize.
+
+    Should be used with JsonResponseWrapper on the outside,
+    unless there is another middleware that turns raw values into HttpResponse.
+    If used with PageWrapper, this middleware needs to be on the outside.
+    """
+
     def __init__(self, get_response):
         self.__get_response = get_response
 
