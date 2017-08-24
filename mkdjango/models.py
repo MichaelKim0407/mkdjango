@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from . import constants
+
 __author__ = 'Michael'
 
 
@@ -10,7 +12,10 @@ class FixedCharField(models.Field):
         super().__init__(max_length=max_length, *args, **kwargs)
 
     def db_type(self, connection):
-        return "CHAR({})".format(self.__max_length)
+        if connection.settings_dict['ENGINE'] == constants.DB_BACKEND_MYSQL:
+            return "CHAR({})".format(self.__max_length)
+        else:
+            return super().db_type(connection)
 
 
 class _ManagedDateTimeField(models.DateTimeField):
@@ -35,9 +40,11 @@ class _ManagedDateTimeField(models.DateTimeField):
 
 class CreateTimeField(_ManagedDateTimeField):
     """
-    创建时间 字段。
-    创建时可以手动填入。
-    如果创建时为空，则自动填入当前时间。
+    A field representing the creation time.
+
+    This field differs from a `DateTimeField(auto_now_add=True)` in the way that:
+    - At the time of creation, it can be overridden;
+      if blank, the current time will be used.
     """
 
     def pre_save(self, model_instance, add):
@@ -49,43 +56,88 @@ class CreateTimeField(_ManagedDateTimeField):
         return self._set_now(model_instance)
 
 
-DELETE_FIELD_NAME = 'is_deleted'
-
-
-def is_deleted(model_instance):
-    return hasattr(model_instance, DELETE_FIELD_NAME) \
-           and getattr(model_instance, DELETE_FIELD_NAME)
-
-
 class ModifyTimeField(_ManagedDateTimeField):
     """
-    修改时间 字段。
-    创建时可以手动填入。
-    修改时自动变为当前时间。
+    A field representing the modification time.
+
+    This field differs from a `DateTimeField(auto_now=True)` in the way that:
+    - At the time of creation, it can be overridden;
+      if blank, the value will be null.
+    - If `delete_flag` is not None,
+      a field with corresponding named exists,
+      and evaluates as True,
+      the value will no longer be updated.
     """
+
+    def __init__(self, delete_flag=None, *args, **kwargs):
+        kwargs['null'] = True
+        kwargs['blank'] = True
+        self.__delete_flag = delete_flag
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        if 'null' in kwargs:
+            del kwargs['null']
+        if 'blank' in kwargs:
+            del kwargs['blank']
+        kwargs['delete_flag'] = self.__delete_flag
+        return name, path, args, kwargs
+
+    def is_deleted(self, model_instance):
+        if self.__delete_flag is None:
+            return False
+        if not hasattr(model_instance, self.__delete_flag):
+            return False
+        return getattr(model_instance, self.__delete_flag)
 
     def pre_save(self, model_instance, add):
         value = super().pre_save(model_instance, add)
         if add:
             return value
-        if is_deleted(model_instance):
+        if self.is_deleted(model_instance):
             return value
         return self._set_now(model_instance)
 
 
 class DeleteTimeField(_ManagedDateTimeField):
     """
-    删除时间 字段。
-    创建时可以手动填入。
-    删除时自动变为当前时间。
+    A field representing the deletion time.
+
+    This field behaves as follows:
+    - The field with a name of specified `delete_flag` must exist.
+    - If the corresponding field evaluates as False,
+      the value will always be None.
+    - If the corresponding field evaluates as True,
+        - At the time of creation, it can be overridden;
+          if blank, the current time will be used.
+        - The current time will be used if the field is None,
+          i.e. it only updates for the first time.
     """
+
+    def __init__(self, delete_flag, *args, **kwargs):
+        kwargs['null'] = True
+        kwargs['blank'] = True
+        self.__delete_flag = delete_flag
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        if 'null' in kwargs:
+            del kwargs['null']
+        if 'blank' in kwargs:
+            del kwargs['blank']
+        kwargs['delete_flag'] = self.__delete_flag
+        return name, path, args, kwargs
+
+    def is_deleted(self, model_instance):
+        return getattr(model_instance, self.__delete_flag)
 
     def pre_save(self, model_instance, add):
         value = super().pre_save(model_instance, add)
-        if add:
-            return value
-        if not is_deleted(model_instance):
-            # FIXME 如果删除后调用了 save() 方法，则会再次更新删除时间
-            # FIXME 不过估计不会有这种操作。。。
+        if not self.is_deleted(model_instance):
+            return None
+        if value is not None:
+            # If already deleted
             return value
         return self._set_now(model_instance)

@@ -3,7 +3,17 @@ from django.http import JsonResponse, HttpResponse
 __author__ = 'Michael'
 
 
-class AjaxErrorResponse(Exception):
+class JsonErrorResponse(Exception):
+    """
+    An error response intended to be transformed into a JsonResponse by JsonResponseWrapper.
+
+    You may subclass this class to create Errors with specific error codes or messages,
+    e.g.
+
+    class MyError(JsonErrorResponse):
+        CODE = 1
+        MSG = "my error"
+    """
     CODE = None
     MSG = None
 
@@ -27,6 +37,23 @@ class AjaxErrorResponse(Exception):
 
 
 class JsonResponseWrapper(object):
+    """
+    A middleware that, if the value returned by a view is not HttpResponse,
+    wrap it into a JsonResponse in the following form:
+
+    JsonResponse({
+        'code': 0,
+        'data': return value
+    })
+
+    Also, if a JsonErrorResponse is raised in the view,
+    this middleware will turn it into a JsonResponse with specified
+    error code, message and data.
+
+    If used with other middlewares such as PageWrapper or ModelWrapper,
+    this middleware needs to be the outermost one.
+    """
+
     def __init__(self, get_response):
         self.__get_response = get_response
 
@@ -42,7 +69,7 @@ class JsonResponseWrapper(object):
             })
 
     def process_exception(self, request, e):
-        if isinstance(e, AjaxErrorResponse):
+        if isinstance(e, JsonErrorResponse):
             return e.get_response()
         else:
             return None

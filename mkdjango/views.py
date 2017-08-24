@@ -1,3 +1,4 @@
+from django.http import HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import render as _render
 
 __author__ = 'Michael'
@@ -48,11 +49,18 @@ def view(pass_request=False, **kwargs):
     """
     Decorate a function with named parameters, rewriting it as a view.
 
-    :param pass_request: Whether `request` should be passed as the first argument
+    :param pass_request: Whether `request` should be passed as the first argument.
     :param kwargs:
         Specify types for parameters.
         Unspecified parameters will have the default type `str`.
     :return: The view.
+
+    e.g.
+
+    @view(x=int)
+    def f(name, x):
+        name is the value of request param `name`
+        x is the int value of request param `x`
     """
 
     def __decor(func):
@@ -74,25 +82,29 @@ def view(pass_request=False, **kwargs):
     return __decor
 
 
-def render(pass_request=False, **kwargs):
+def render():
     """
-    原函数返回的值传到 django.shortcuts.render 里面
-    如果返回一个 str ，则调用 render(request, result)
-    如果返回一个 tuple ，则调用 render(request, *result)
-    如果返回一个 dict ，则调用 render(request, **result)
+    Decorates a view-like function, passing its return values to `django.shortcuts.render`.
+
+    - If the return value is a str, call render(request, result).
+    - If the return value is a tuple, call render(request, *result).
+    - If the return value is a dict, call render(request, **result).
+
+    e.g.
+
+    @render()
+    @view()
+    def index():
+        return 'index.html'
     """
 
-    def __decor(func):
-        params = __get_params_def(func, kwargs, 1 if pass_request else 0)
+    def __decor(view_func):
 
         def __view(request):
-            d = getattr(request, request.method)
-            parameters = __get_parameters(params, d)
+            result = view_func(request)
 
-            if pass_request:
-                result = func(request, **parameters)
-            else:
-                result = func(**parameters)
+            if isinstance(result, HttpResponse):
+                return result
 
             if isinstance(result, str):
                 return _render(request, result)
@@ -108,23 +120,31 @@ def render(pass_request=False, **kwargs):
     return __decor
 
 
-class MethodNotSupported(Exception):
-    def __init__(self, method):
-        self.method = method
-
-    def __str__(self):
-        return "Method '{}' is not supported for this view".format(self.method)
-
-
 def combine(**kwargs):
     """
-    把 GET 和 POST 组合起来成为一个 view 。
+    Decorates a view-like function and creates a new view that,
+    based on the request method (GET/POST),
+    process the request with another view.
 
-    原函数有一个参数为 request ，其内容为共同初始化内容。
-    如果原函数返回内容，则直接结束请求；
-    如果原函数不返回内容（返回 None ），则进入相应的 view 。
+    If the view body is not empty, it will be called first.
+    If the function returns a value that is not None,
+    the value is immediately returned and no method-based view will be called.
 
-    :param kwargs: key 为请求方式， value 为相应的 view
+    e.g.
+
+    @render()
+    def __get_form():
+        return 'form.html'
+
+    @view()
+    def __post_form():
+        do stuff here
+
+    @combine(GET=__get_form, POST=__post_form)
+    @view(id=int)
+    def form(id):
+        if id not in xxx:
+            return HttpResponseBadRequest()
     """
 
     def __decor(func):
@@ -134,7 +154,7 @@ def combine(**kwargs):
                 return init
 
             if request.method not in kwargs:
-                raise MethodNotSupported(request.method)
+                return HttpResponseNotAllowed(kwargs.keys())
 
             return kwargs[request.method](request)
 
@@ -145,15 +165,21 @@ def combine(**kwargs):
 
 def method(*args):
     """
-    限制一个 view 所允许的请求方式
-    :param args: 允许的请求方式
-    :return: 新的 view
+    Decorates a view, limit the request method.
+
+    e.g.
+
+    @method('GET')
+    @render()
+    @view()
+    def index():
+        return 'index.html'
     """
 
     def __decor(view_func):
         def __view(request):
             if request.method not in args:
-                raise MethodNotSupported(request.method)
+                return HttpResponseNotAllowed(args)
             return view_func(request)
 
         return __view
