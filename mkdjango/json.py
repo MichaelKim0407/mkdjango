@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponse
 __author__ = 'Michael'
 
 
-class AjaxErrorResponse(Exception):
+class JsonErrorResponse(Exception):
     CODE = None
     MSG = None
 
@@ -42,7 +42,7 @@ class JsonResponseWrapper(object):
             })
 
     def process_exception(self, request, e):
-        if isinstance(e, AjaxErrorResponse):
+        if isinstance(e, JsonErrorResponse):
             return e.get_response()
         else:
             return None
