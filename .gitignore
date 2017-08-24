@@ -8,3 +8,6 @@ __pycache__/
 # Pip
 dist/
 *.egg-info/
+
+# MacOS
+.DS_Store
