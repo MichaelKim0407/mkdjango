@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from . import constants
+
 __author__ = 'Michael'
 
 
@@ -10,7 +12,10 @@ class FixedCharField(models.Field):
         super().__init__(max_length=max_length, *args, **kwargs)
 
     def db_type(self, connection):
-        return "CHAR({})".format(self.__max_length)
+        if connection.settings_dict['ENGINE'] == constants.DB_BACKEND_MYSQL:
+            return "CHAR({})".format(self.__max_length)
+        else:
+            return super().db_type(connection)
 
 
 class _ManagedDateTimeField(models.DateTimeField):
