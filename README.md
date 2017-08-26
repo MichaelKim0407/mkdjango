@@ -1,6 +1,6 @@
 # Michael Kim's Django Library
 
-Author: Michael Kim <mkim0407@gmail.com>
+Author: [Michael Kim](http://michaelkim0407.com) <mkim0407@gmail.com>
 
 ## Compatibility
 
