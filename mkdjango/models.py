@@ -6,6 +6,14 @@ from . import constants
 __author__ = 'Michael'
 
 
+class TinyIntegerField(models.SmallIntegerField):
+    def db_type(self, connection):
+        if connection.settings_dict['ENGINE'] == constants.DB_BACKEND_MYSQL:
+            return "TINYINT"
+        else:
+            return super().db_type(connection)
+
+
 class FixedCharField(models.Field):
     def __init__(self, max_length, *args, **kwargs):
         self.__max_length = max_length
