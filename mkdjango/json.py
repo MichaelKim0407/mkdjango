@@ -1,4 +1,4 @@
-from django.http import JsonResponse, HttpResponse
+import django.http as _http
 
 __author__ = 'Michael'
 
@@ -33,7 +33,7 @@ class JsonErrorResponse(Exception):
         }
 
     def get_response(self):
-        return JsonResponse(self.get_object())
+        return _http.JsonResponse(self.get_object())
 
 
 class JsonResponseWrapper(object):
@@ -60,10 +60,10 @@ class JsonResponseWrapper(object):
     def __call__(self, request):
         response = self.__get_response(request)
 
-        if isinstance(response, HttpResponse):
+        if isinstance(response, _http.HttpResponse):
             return response
         else:
-            return JsonResponse({
+            return _http.JsonResponse({
                 'code': 0,
                 'data': response
             })

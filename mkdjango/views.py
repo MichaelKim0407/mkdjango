@@ -1,4 +1,4 @@
-from django.http import HttpResponse, HttpResponseNotAllowed
+import django.http as _http
 from django.shortcuts import render as _render
 
 __author__ = 'Michael'
@@ -103,7 +103,7 @@ def render():
         def __view(request):
             result = view_func(request)
 
-            if isinstance(result, HttpResponse):
+            if isinstance(result, _http.HttpResponse):
                 return result
 
             if isinstance(result, str):
@@ -154,7 +154,7 @@ def combine(**kwargs):
                 return init
 
             if request.method not in kwargs:
-                return HttpResponseNotAllowed(kwargs.keys())
+                return _http.HttpResponseNotAllowed(kwargs.keys())
 
             return kwargs[request.method](request)
 
@@ -179,7 +179,7 @@ def method(*args):
     def __decor(view_func):
         def __view(request):
             if request.method not in args:
-                return HttpResponseNotAllowed(args)
+                return _http.HttpResponseNotAllowed(args)
             return view_func(request)
 
         return __view

@@ -1,12 +1,12 @@
-from django.http import HttpResponse
+import django.http as _http
 
-from .serialize import is_query_set
+from . import serialize as _serialize
 
 __author__ = 'Michael'
 
 
 def is_list(obj):
-    return is_query_set(obj) \
+    return _serialize.is_query_set(obj) \
            or isinstance(obj, list) \
            or isinstance(obj, tuple)
 
@@ -61,7 +61,7 @@ class PageWrapper(object):
     def __call__(self, request):
         response = self.__get_response(request)
 
-        if isinstance(response, HttpResponse):
+        if isinstance(response, _http.HttpResponse):
             return response
 
         if request.method != 'GET':
@@ -79,7 +79,7 @@ class PageWrapper(object):
         a = page_size * (page_num - 1)
         b = page_size * page_num
 
-        if is_query_set(response):
+        if _serialize.is_query_set(response):
             response = response.all()
             size = response.count()
         else:
