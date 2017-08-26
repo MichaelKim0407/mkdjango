@@ -1,5 +1,5 @@
-import django.db.models
-from django.http import HttpResponse
+import django.db.models as _models
+import django.http as _http
 
 __author__ = 'Michael'
 
@@ -81,7 +81,7 @@ def serialize(obj):
 
     result = {field.name: field.value_from_object(obj)
               for field in obj._meta.get_fields()
-              if isinstance(field, django.db.models.Field)}
+              if isinstance(field, _models.Field)}
 
     for attr in obj.__class__.__dict__.values():
         if isinstance(attr, SerializeProperty):
@@ -95,12 +95,12 @@ def serialize(obj):
 
 
 def is_query_set(obj):
-    return isinstance(obj, django.db.models.Manager) \
-           or isinstance(obj, django.db.models.QuerySet)
+    return isinstance(obj, _models.Manager) \
+           or isinstance(obj, _models.QuerySet)
 
 
 def is_query_object(obj):
-    return isinstance(obj, django.db.models.Model)
+    return isinstance(obj, _models.Model)
 
 
 def is_query_result(obj):
@@ -146,7 +146,7 @@ class ModelWrapper(object):
     def __call__(self, request):
         response = self.__get_response(request)
 
-        if isinstance(response, HttpResponse):
+        if isinstance(response, _http.HttpResponse):
             return response
 
         return serialize_all(response)

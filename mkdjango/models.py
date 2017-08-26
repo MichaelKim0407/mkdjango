@@ -1,32 +1,32 @@
-from django.db import models
-from django.utils import timezone
+import django.db.models as _models
+import django.utils.timezone as _timezone
 
-from . import constants
+from . import constants as _constants
 
 __author__ = 'Michael'
 
 
-class TinyIntegerField(models.SmallIntegerField):
+class TinyIntegerField(_models.SmallIntegerField):
     def db_type(self, connection):
-        if connection.settings_dict['ENGINE'] == constants.DB_BACKEND_MYSQL:
+        if connection.settings_dict['ENGINE'] == _constants.DB_BACKEND_MYSQL:
             return "TINYINT"
         else:
             return super().db_type(connection)
 
 
-class FixedCharField(models.CharField):
+class FixedCharField(_models.CharField):
     def __init__(self, max_length, *args, **kwargs):
         self.__max_length = max_length
         super().__init__(max_length=max_length, *args, **kwargs)
 
     def db_type(self, connection):
-        if connection.settings_dict['ENGINE'] == constants.DB_BACKEND_MYSQL:
+        if connection.settings_dict['ENGINE'] == _constants.DB_BACKEND_MYSQL:
             return "CHAR({})".format(self.__max_length)
         else:
             return super().db_type(connection)
 
 
-class _ManagedDateTimeField(models.DateTimeField):
+class _ManagedDateTimeField(_models.DateTimeField):
     def __init__(self, *args, **kwargs):
         kwargs['auto_now'] = False
         kwargs['auto_now_add'] = False
@@ -41,7 +41,7 @@ class _ManagedDateTimeField(models.DateTimeField):
         return name, path, args, kwargs
 
     def _set_now(self, model_instance):
-        value = timezone.now()
+        value = _timezone.now()
         setattr(model_instance, self.attname, value)
         return value
 
