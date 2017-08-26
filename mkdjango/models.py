@@ -14,7 +14,7 @@ class TinyIntegerField(models.SmallIntegerField):
             return super().db_type(connection)
 
 
-class FixedCharField(models.Field):
+class FixedCharField(models.CharField):
     def __init__(self, max_length, *args, **kwargs):
         self.__max_length = max_length
         super().__init__(max_length=max_length, *args, **kwargs)
