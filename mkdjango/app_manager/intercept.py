@@ -16,11 +16,17 @@ class AppNameInterceptor(object):
         response = self.__get_response(request)
 
         app_name = request.resolver_match.app_name
+        if not app_name:
+            if settings.INTERCEPT_NOAPP:
+                logger.info("Intercepted no_app")
+                raise Http404
+            return response
+
         try:
             app = models.App.objects.get(name=app_name)
         except models.App.DoesNotExist:
             # Not registered in the database
-            if settings.APP_MANAGER_INTERCEPT_UNREGISTERED:
+            if settings.INTERCEPT_UNREGISTERED:
                 logger.info("Intercepted unregistered app '{}'".format(app_name))
                 raise Http404
             return response

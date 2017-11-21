@@ -38,6 +38,16 @@ In `settings.py`:
 
     Default is `False`.
 
+* Specify whether app-less urls will be intercepted
+
+    ```
+    APP_MANAGER_INTERCEPT_NOAPP = True
+    ```
+
+    Default is `False`.
+
+    This option is in the settings, but it's probably not a good idea to set it to `True`...
+
 Run migrations:
 
 ```
